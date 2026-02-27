@@ -93,7 +93,7 @@ export default function DashboardLayout() {
                         text="Conductores" collapsed={collapsed}
                     />
                     <SidebarLink to="/dashboard/aseguradoras" icon={<ShieldCheck size={18} />}
-                        text="Aseguradoras" collapsed={collapsed}
+                        text="Aseguradoras" collapsed={collapsed} title
                     />
                     <SidebarLink to="/dashboard/asociaciones" icon={<Handshake size={18} />}
                         text="Asociaciones" collapsed={collapsed}

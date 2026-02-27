@@ -1,17 +1,28 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Power, PowerOff, BusFront, Search, Eye } from "lucide-react";
+import { Edit, Power, PowerOff, BusFront, Eye } from "lucide-react";
 import { listarVehiculos, cambiarEstadoVehiculo } from "../../services/vehiculoService";
 import ModalVerVehiculo from "../../features/vehiculos/ModalVerVehiculo.jsx";
 import ModalCambioEstado from "../../components/ui/ModalCambioEstado";
 import ModalVehiculo from "../../features/vehiculos/ModalVehiculo.jsx";
+
+// Importamos nuestros componentes reutilizables
+import TableToolbar from "../../components/ui/TableToolbar.jsx";
+import TablePagination from "../../components/ui/TablePagination.jsx";
+
 export default function Vehiculos() {
   const [vehiculos, setVehiculos] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // --- ESTADOS DE TABLA (Búsqueda, Filtro y Paginación) ---
   const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const registrosPorPagina = 10;
 
   const [modalFormOpen, setModalFormOpen] = useState(false);
   const [modalEstadoOpen, setModalEstadoOpen] = useState(false);
   const [modalVerOpen, setModalVerOpen] = useState(false);
+  
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState(null);
   const [loadingEstado, setLoadingEstado] = useState(false);
 
@@ -31,14 +42,34 @@ export default function Vehiculos() {
     cargarVehiculos();
   }, []);
 
-  // Filtro mejorado: Ignora mayúsculas/minúsculas y busca por placa o marca
+  // Resetear a la página 1 si cambian los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda, filtroEstado]);
+
+  // --- LÓGICA DE FILTRADO (Placa + Estado) ---
   const vehiculosFiltrados = vehiculos.filter((v) => {
     const termino = busqueda.toLowerCase();
-    return (
-      v.placa?.toLowerCase().includes(termino)
-    );
+    
+    // Filtro por placa
+    const coincideBusqueda = v.placa?.toLowerCase().includes(termino);
+
+    // Filtro por estado
+    const coincideEstado = 
+      filtroEstado === "todos" ? true : 
+      filtroEstado === "activos" ? v.estado === 1 : 
+      v.estado === 0;
+
+    return coincideBusqueda && coincideEstado;
   });
 
+  // --- LÓGICA DE PAGINACIÓN ---
+  const indiceUltimoRegistro = paginaActual * registrosPorPagina;
+  const indicePrimerRegistro = indiceUltimoRegistro - registrosPorPagina;
+  const vehiculosPaginados = vehiculosFiltrados.slice(indicePrimerRegistro, indiceUltimoRegistro);
+  const totalPaginas = Math.ceil(vehiculosFiltrados.length / registrosPorPagina) || 1;
+
+  // Handlers Modales
   const handleOpenCrear = () => {
     setVehiculoSeleccionado(null);
     setModalFormOpen(true);
@@ -75,48 +106,26 @@ export default function Vehiculos() {
   return (
     <div className="p-6 animate-[fadeIn_0.3s_ease-out]">
 
-      {/* 1. Cabecera de la Página
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <BusFront className="text-blue-600" /> Gestión de Vehículos
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Administra la flota vehicular municipal, propietarios y estados.
-        </p>
-      </div> */}
+      {/* Uso de nuestro componente reutilizable de cabecera */}
+      <TableToolbar 
+        busqueda={busqueda}
+        setBusqueda={setBusqueda}
+        filtroEstado={filtroEstado}
+        setFiltroEstado={setFiltroEstado}
+        onAdd={handleOpenCrear}
+        addLabel="Registrar Vehículo"
+        searchPlaceholder="Buscar por placa..."
+      />
 
-      {/* 2. Contenedor Principal de la Tabla */}
+      {/* Contenedor Principal de la Tabla */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
 
-        {/* Barra de Herramientas (Buscador y Botón) */}
-        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
-
-          {/* Buscador */}
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por placa"
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-medium text-slate-700 shadow-sm"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-
-          {/* Botón Nuevo Vehículo */}
-          <button
-            onClick={handleOpenCrear}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
-          >
-            <Plus size={20} /> Registrar Vehículo
-          </button>
-        </div>
-
-        {/* 3. Tabla de Datos */}
+        {/* Tabla de Datos */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-500 text-[11px] uppercase font-bold tracking-wider border-b border-slate-200">
               <tr>
+                <th className="p-4">N°</th>
                 <th className="p-4">Placa</th>
                 <th className="p-4">Vehículo</th>
                 <th className="p-4">Propietario Principal</th>
@@ -128,23 +137,27 @@ export default function Vehiculos() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-500">
+                  <td colSpan="7" className="p-8 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
                       <p>Cargando flota...</p>
                     </div>
                   </td>
                 </tr>
-              ) : vehiculosFiltrados.length === 0 ? (
+              ) : vehiculosPaginados.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-10 text-center text-slate-500">
+                  <td colSpan="7" className="p-10 text-center text-slate-500">
                     <BusFront size={48} className="mx-auto text-slate-300 mb-3" />
                     <p className="text-lg font-medium text-slate-600">No se encontraron vehículos</p>
-                    {busqueda && <p className="text-sm">No hay coincidencias para "{busqueda}"</p>}
+                    <p className="text-sm">Intenta con otros términos de búsqueda o filtros.</p>
                   </td>
                 </tr>
-              ) : vehiculosFiltrados.map((v) => (
+              ) : vehiculosPaginados.map((v, index) => (
                 <tr key={v.idVehi} className="hover:bg-slate-50 transition-colors group">
+                  <td className="p-4 text-sm font-medium text-slate-600">
+                    {/* Número real correlativo */}
+                    {indicePrimerRegistro + index + 1}
+                  </td>
                   <td className="p-4">
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-md shadow-sm">
                       <span className="text-sm font-bold text-slate-800 font-mono tracking-widest">{v.placa}</span>
@@ -177,15 +190,15 @@ export default function Vehiculos() {
                   <td className="p-4">
                     <div className="flex justify-center gap-2">
                       <button onClick={() => handleOpenVer(v)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" title="Ver Detalles">
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Ver Detalles">
                         <Eye size={18} />
                       </button>
                       <button onClick={() => handleOpenEditar(v.idVehi)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                         <Edit size={18} />
                       </button>
                       <button onClick={() => handleOpenEstado(v)}
-                        className={`p-2 rounded-lg ${v.estado === 1 ? "text-red-500 hover:bg-red-50" : "text-green-500 hover:bg-green-50"}`} title="Cambiar Estado">
+                        className={`p-2 rounded-lg transition-colors ${v.estado === 1 ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"}`} title="Cambiar Estado">
                         {v.estado === 1 ? <PowerOff size={18} /> : <Power size={18} />}
                       </button>
                     </div>
@@ -196,6 +209,18 @@ export default function Vehiculos() {
           </table>
         </div>
       </div>
+
+      {/* Uso de nuestro componente reutilizable de Paginación */}
+      {!loading && (
+        <TablePagination 
+          paginaActual={paginaActual}
+          totalPaginas={totalPaginas}
+          totalRegistros={vehiculosFiltrados.length}
+          indicePrimerRegistro={indicePrimerRegistro}
+          indiceUltimoRegistro={indiceUltimoRegistro}
+          setPaginaActual={setPaginaActual}
+        />
+      )}
 
       {/* Modales */}
       <ModalVehiculo
@@ -216,7 +241,7 @@ export default function Vehiculos() {
           isOpen={modalEstadoOpen}
           onClose={() => setModalEstadoOpen(false)}
           onConfirm={confirmarCambioEstado}
-          titulo="Vehículo"
+          titulo="Estado del Vehículo"
           entidadNombre={`Placa ${vehiculoSeleccionado.placa}`}
           estadoActual={vehiculoSeleccionado.estado}
           isLoading={loadingEstado}

@@ -24,6 +24,8 @@ export const getTokenData = () => {
       name: decoded.sub,
       email: decoded.correo,
       role: decoded.rol,
+      nombre: decoded.nombre,
+      apellidos: decoded.apellidos,
       issuedAt: decoded.iat,
       expiresAt: decoded.exp,
     };

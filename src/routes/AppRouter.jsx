@@ -13,6 +13,7 @@ import VehiculosSeguros from '../pages/dashboard/VehiculosSeguros';
 import Conductores from '../pages/dashboard/Conductores.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import Inicio from '../pages/Inicio.jsx';
+import InicioPrincipal from '../pages/InicioPrincipal.jsx';
 import PrivateRoute from './PrivateRoute';
 export default function AppRouter() {
   return (
@@ -20,7 +21,7 @@ export default function AppRouter() {
       <Routes>
 
         {/* === RUTA INICIO === */}
-        <Route path="/" element={<Inicio />} />
+        <Route path="/" element={<InicioPrincipal />} />
 
         {/* === LOGIN === */}
         <Route path="/administracion-login" element={<LoginPage />} />
@@ -34,7 +35,7 @@ export default function AppRouter() {
             </PrivateRoute>
           }
         >
-          <Route index element={<h2 className="text-2xl font-bold text-gray-800">Bienvenido al Panel Principal</h2>} />
+          <Route index element={<Inicio />} />
 
           {/* RUTA PROTEGIDA POR ROLES */}
           <Route

@@ -185,7 +185,7 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Rol del Sistema</label>
                 <select name="rol" value={formData.rol} onChange={handleChange} required
                   className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white cursor-pointer transition-all text-slate-700">
-                  <option value="superadminstrador">Superadministrador</option>
+                  <option value="superadministrador">Superadministrador</option>
                   <option value="administrador">Administrador</option>
                   <option value="moderador">Moderador</option>
                   <option value="asistente">Asistente</option>

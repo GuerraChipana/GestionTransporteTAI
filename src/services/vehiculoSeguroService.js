@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL + "/vehiculos";
+const API_URL = import.meta.env.VITE_API_URL + "/vehiculos-seguros";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -9,48 +8,39 @@ const getAuthHeaders = () => {
   };
 };
 
-const getMultipartHeaders = () => {
-  const token = localStorage.getItem("token");
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
-export const listarVehiculos = async () => {
+export const listarVehiculosSeguros = async () => {
   try {
     const response = await axios.get(API_URL, getAuthHeaders());
-    return response.data.data; 
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const obtenerVehiculoPorId = async (id) => {
-  try {
-    const response = await axios.get(`${API_URL}/${id}`, getAuthHeaders());
-    return response.data.data; 
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const crearVehiculo = async (formData) => {
-  try {
-    const response = await axios.post(API_URL, formData, getMultipartHeaders());
     return response.data.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-export const actualizarVehiculo = async (id, formData) => {
+export const obtenerVehiculoSeguroPorId = async (id) => {
+  try {
+    const response = await axios.get(`${API_URL}/${id}`, getAuthHeaders());
+    return response.data.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const crearVehiculoSeguro = async (data) => {
+  try {
+    const response = await axios.post(API_URL, data, getAuthHeaders());
+    return response.data.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const actualizarVehiculoSeguro = async (id, data) => {
   try {
     const response = await axios.patch(
       `${API_URL}/${id}`,
-      formData,
-      getMultipartHeaders(),
+      data,
+      getAuthHeaders(),
     );
     return response.data.data;
   } catch (error) {
@@ -58,7 +48,7 @@ export const actualizarVehiculo = async (id, formData) => {
   }
 };
 
-export const cambiarEstadoVehiculo = async (id, data) => {
+export const cambiarEstadoVehiculoSeguro = async (id, data) => {
   try {
     const response = await axios.patch(
       `${API_URL}/${id}/estado`,

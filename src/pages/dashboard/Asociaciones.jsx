@@ -1,13 +1,22 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Edit, Power, PowerOff, Building2 } from "lucide-react";
+import { Edit, Power, PowerOff, Building2 } from "lucide-react";
 import { listarAsociaciones, cambiarEstadoAsociacion } from "../../services/asociacionService";
 import ModalAsociacion from "../../features/asocicaciones/ModalAsociacion.jsx";
 import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 
+// Importamos nuestros componentes reutilizables
+import TableToolbar from "../../components/ui/TableToolbar.jsx";
+import TablePagination from "../../components/ui/TablePagination.jsx";
+
 export default function Asociaciones() {
   const [asociaciones, setAsociaciones] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // --- ESTADOS PARA BÚSQUEDA, FILTROS Y PAGINACIÓN ---
   const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const registrosPorPagina = 10;
 
   // Estados de modales
   const [modalFormOpen, setModalFormOpen] = useState(false);
@@ -33,9 +42,31 @@ export default function Asociaciones() {
     cargarAsociaciones();
   }, []);
 
-  // Filtramos por nombre o documento
-  const asociacionesFiltradas = asociaciones.filter((a) =>
-    a.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  // --- RESETEAR PÁGINA SI CAMBIAN LOS FILTROS ---
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda, filtroEstado]);
+
+  // --- LÓGICA DE FILTRADO (Por Nombre, Documento y Estado) ---
+  const asociacionesFiltradas = asociaciones.filter((a) => {
+    const textoBusqueda = busqueda.toLowerCase();
+    const coincideBusqueda =
+      a.nombre?.toLowerCase().includes(textoBusqueda) ||
+      a.documento?.toLowerCase().includes(textoBusqueda);
+
+    const coincideEstado =
+      filtroEstado === "todos" ? true :
+        filtroEstado === "activos" ? a.estado === 1 :
+          a.estado === 0;
+
+    return coincideBusqueda && coincideEstado;
+  });
+
+  // --- LÓGICA DE PAGINACIÓN ---
+  const indiceUltimoRegistro = paginaActual * registrosPorPagina;
+  const indicePrimerRegistro = indiceUltimoRegistro - registrosPorPagina;
+  const asociacionesPaginadas = asociacionesFiltradas.slice(indicePrimerRegistro, indiceUltimoRegistro);
+  const totalPaginas = Math.ceil(asociacionesFiltradas.length / registrosPorPagina) || 1;
 
   // --- HANDLERS MODALES ---
   const handleOpenCrear = () => {
@@ -57,7 +88,6 @@ export default function Asociaciones() {
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
-      // datosEstado = { estado: 1|0, detalle_baja: "..." }
       await cambiarEstadoAsociacion(asociacionSeleccionada.idAsoci, datosEstado);
       setModalEstadoOpen(false);
       cargarAsociaciones();
@@ -71,29 +101,19 @@ export default function Asociaciones() {
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
 
-      {/* Cabecera y Filtros */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <input
-            type="text"
-            placeholder="Buscar por nombre"
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-medium text-slate-700 shadow-sm"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
-        <button
-          onClick={handleOpenCrear}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-blue-600/20"
-        >
-          <Plus size={20} />
-          <span className="font-medium">Nueva Asociación</span>
-        </button>
-      </div>
+      {/* Uso de nuestro componente reutilizable de cabecera */}
+      <TableToolbar
+        busqueda={busqueda}
+        setBusqueda={setBusqueda}
+        filtroEstado={filtroEstado}
+        setFiltroEstado={setFiltroEstado}
+        onAdd={handleOpenCrear}
+        addLabel="Nueva Asociación"
+        searchPlaceholder="Buscar asociación o documento..."
+      />
 
       {/* Tabla Responsiva */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <div className="overflow-x-auto rounded-t-xl border border-slate-200">
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-700 text-sm">
             <tr>
@@ -114,23 +134,28 @@ export default function Asociaciones() {
                   </div>
                 </td>
               </tr>
-            ) : asociacionesFiltradas.length === 0 ? (
+            ) : asociacionesPaginadas.length === 0 ? (
               <tr>
                 <td colSpan="5" className="p-12 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Building2 size={40} className="text-slate-300 mb-2" />
                     <p className="font-medium text-lg">No se encontraron resultados</p>
-                    <p className="text-sm">Intenta con otros términos de búsqueda.</p>
+                    <p className="text-sm">Intenta con otros términos de búsqueda o filtros.</p>
                   </div>
                 </td>
               </tr>
             ) : (
-              asociacionesFiltradas.map((a) => (
+              asociacionesPaginadas.map((a, index) => (
                 <tr key={a.idAsoci} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 text-sm font-medium text-slate-600">{a.idAsoci}</td>
+                  <td className="p-4 text-sm font-medium text-slate-600">
+                    {/* Número correlativo real */}
+                    {indicePrimerRegistro + index + 1}
+                  </td>
                   <td className="p-4 text-sm font-bold text-slate-800">{a.nombre}</td>
-                  <td className="p-4 text-sm text-slate-600 font-mono bg-slate-50/50 rounded-md inline-block mt-2 ml-4 px-2 py-1 border border-slate-100">
-                    {a.documento}
+                  <td className="p-4 text-sm text-slate-600">
+                    <span className="font-mono bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
+                      {a.documento}
+                    </span>
                   </td>
                   <td className="p-4 text-sm text-center">
                     <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase ${a.estado === 1 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
@@ -141,19 +166,12 @@ export default function Asociaciones() {
                   <td className="p-4 flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleOpenEditar(a.idAsoci)}
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar"
-                    >
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                       <Edit size={18} />
                     </button>
                     <button
                       onClick={() => handleOpenEstado(a)}
-                      className={`p-2 rounded-lg transition-colors ${a.estado === 1
-                        ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                        }`}
-                      title="Cambiar Estado"
-                    >
+                      className={`p-2 rounded-lg transition-colors ${a.estado === 1 ? "text-red-500 hover:bg-red-50" : "text-green-500 hover:bg-green-50"}`} title="Cambiar Estado">
                       {a.estado === 1 ? <PowerOff size={18} /> : <Power size={18} />}
                     </button>
                   </td>
@@ -163,6 +181,18 @@ export default function Asociaciones() {
           </tbody>
         </table>
       </div>
+
+      {/* Uso de nuestro componente reutilizable de Paginación */}
+      {!loading && (
+        <TablePagination
+          paginaActual={paginaActual}
+          totalPaginas={totalPaginas}
+          totalRegistros={asociacionesFiltradas.length}
+          indicePrimerRegistro={indicePrimerRegistro}
+          indiceUltimoRegistro={indiceUltimoRegistro}
+          setPaginaActual={setPaginaActual}
+        />
+      )}
 
       {/* MODALES INTEGRADOS */}
       <ModalAsociacion
