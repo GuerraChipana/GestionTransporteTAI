@@ -9,6 +9,9 @@ import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
 
+// 1. Importamos la librería de notificaciones
+import { toast } from "sonner";
+
 export default function Empadronamientos() {
   const [empadronamientos, setEmpadronamientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,6 +37,7 @@ export default function Empadronamientos() {
       setEmpadronamientos(data);
     } catch (error) {
       console.error("Error al cargar empadronamientos", error);
+      toast.error("Error al cargar la lista de empadronamientos.");
     } finally {
       setLoading(false);
     }
@@ -78,14 +82,23 @@ export default function Empadronamientos() {
   const handleOpenVer = (empa) => { setEmpaSeleccionado(empa); setModalVerOpen(true); };
   const handleOpenEstado = (empa) => { setEmpaSeleccionado(empa); setModalEstadoOpen(true); };
 
+  // --- FUNCIÓN MODIFICADA CON SONNER ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoEmpadronamiento(empaSeleccionado.idEmpa, datosEstado);
+
       setModalEstadoOpen(false);
       cargarEmpadronamientos();
+
+      const accion = datosEstado.estado === 1 ? "activado" : "dado de baja";
+      toast.success(`Empadronamiento ${accion} correctamente.`);
+
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      // ¡SOLO CIERRAS EL MODAL! 
+      // El main.jsx ya se encargó de mostrar el toast rojo en la esquina.
+      setModalEstadoOpen(false);
+
     } finally {
       setLoadingEstado(false);
     }

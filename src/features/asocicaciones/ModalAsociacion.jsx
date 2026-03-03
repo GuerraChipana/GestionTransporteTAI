@@ -6,6 +6,9 @@ import {
     obtenerAsociacionPorId
 } from "../../services/asociacionService";
 
+// Importamos toast para los mensajes de éxito
+import { toast } from "sonner";
+
 const formInicial = {
     nombre: "",
     documento: "",
@@ -15,7 +18,6 @@ export default function ModalAsociacion({ isOpen, onClose, asociacionId, onSucce
     const [formData, setFormData] = useState(formInicial);
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
-    const [error, setError] = useState(null);
 
     const isEdit = !!asociacionId;
 
@@ -32,7 +34,8 @@ export default function ModalAsociacion({ isOpen, onClose, asociacionId, onSucce
                         documento: data.documento || "",
                     });
                 } catch (err) {
-                    setError("Error al cargar los datos de la asociación.");
+                    // Si falla la carga, simplemente cerramos el modal
+                    onClose();
                 } finally {
                     setLoadingFetch(false);
                 }
@@ -40,7 +43,6 @@ export default function ModalAsociacion({ isOpen, onClose, asociacionId, onSucce
             fetchAsociacion();
         } else if (!isEdit && isOpen) {
             setFormData(formInicial);
-            setError(null);
         }
     }, [asociacionId, isEdit, isOpen]);
 
@@ -51,18 +53,20 @@ export default function ModalAsociacion({ isOpen, onClose, asociacionId, onSucce
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoadingSubmit(true);
-        setError(null);
 
         try {
             if (isEdit) {
                 await actualizarAsociacion(asociacionId, formData);
+                toast.success("Asociación actualizada exitosamente.");
             } else {
                 await crearAsociacion(formData);
+                toast.success("Asociación registrada exitosamente.");
             }
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.response?.data?.message || "Ocurrió un error inesperado al guardar.");
+            // El error es manejado automáticamente por el interceptor de Axios en main.jsx
+            // No necesitamos hacer nada extra aquí.
         } finally {
             setLoadingSubmit(false);
         }
@@ -91,12 +95,6 @@ export default function ModalAsociacion({ isOpen, onClose, asociacionId, onSucce
 
                 {/* Body Modal */}
                 <div className="p-6">
-                    {error && (
-                        <div className="mb-5 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100">
-                            {error}
-                        </div>
-                    )}
-
                     {loadingFetch ? (
                         <div className="flex flex-col items-center justify-center py-10">
                             <Loader2 className="animate-spin text-blue-600 mb-3" size={32} />

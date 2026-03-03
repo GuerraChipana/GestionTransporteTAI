@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, User, Car, Droplets, AlertCircle, IdCard, Calendar, ShieldCheck, Tag } from "lucide-react";
+import { X, Loader2, User, Car, Droplets, IdCard, Calendar, ShieldCheck, Tag } from "lucide-react";
 import { crearConductor, actualizarConductor, obtenerConductorPorId } from "../../services/conductorService";
 import { listarPersonas } from "../../services/personaService";
 import { listarVehiculos } from "../../services/vehiculoService";
 import SelectBuscador from "../../components/ui/SelectBuscador";
+
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
 
 const formInicial = {
     idPers: "",
@@ -21,7 +24,6 @@ export default function ModalConductor({ isOpen, onClose, conductorId, onSuccess
     const [formData, setFormData] = useState(formInicial);
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
-    const [error, setError] = useState(null);
 
     const [personasOpciones, setPersonasOpciones] = useState([]);
     const [vehiculosOpciones, setVehiculosOpciones] = useState([]);
@@ -84,7 +86,8 @@ export default function ModalConductor({ isOpen, onClose, conductorId, onSuccess
                 }
 
             } catch (err) {
-                setError("Error al cargar los catálogos del sistema.");
+                // Si falla la carga principal, cerramos el modal
+                onClose();
             } finally {
                 setLoadingFetch(false);
                 setLoadingListas(false);
@@ -119,18 +122,27 @@ export default function ModalConductor({ isOpen, onClose, conductorId, onSuccess
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!isEdit && !formData.idPers) return setError("Debe seleccionar una persona.");
-        if (!formData.categoria) return setError("Debe especificar la categoría de licencia.");
-        if (new Date(formData.fecha_desde) > new Date(formData.fecha_hasta)) return setError("La fecha de inicio no puede ser mayor a la de fin.");
+        // Validaciones front-end manuales con Toast para mejor UX
+        if (!isEdit && !formData.idPers) {
+            toast.error("Datos incompletos", { description: "Debe seleccionar una persona." });
+            return;
+        }
+        if (!formData.categoria) {
+            toast.error("Datos incompletos", { description: "Debe especificar la categoría de licencia." });
+            return;
+        }
+        if (new Date(formData.fecha_desde) > new Date(formData.fecha_hasta)) {
+            toast.error("Fecha inválida", { description: "La fecha de inicio no puede ser mayor a la de fin." });
+            return;
+        }
 
         setLoadingSubmit(true);
-        setError(null);
 
         try {
             const payload = {
                 idPers: Number(formData.idPers),
                 numLicencia: formData.numLicencia,
-                clase: formData.clase, // Va a mandar "B" por defecto
+                clase: formData.clase,
                 categoria: formData.categoria,
                 fecha_desde: formData.fecha_desde,
                 fecha_hasta: formData.fecha_hasta,
@@ -146,13 +158,16 @@ export default function ModalConductor({ isOpen, onClose, conductorId, onSuccess
 
             if (isEdit) {
                 await actualizarConductor(idRealParaActualizar, payload);
+                toast.success("Conductor actualizado exitosamente.");
             } else {
                 await crearConductor(payload);
+                toast.success("Conductor registrado exitosamente.");
             }
+
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.response?.data?.message || "Ocurrió un error inesperado al guardar.");
+            // El interceptor en main.jsx ya mostró el error rojo en pantalla
         } finally {
             setLoadingSubmit(false);
         }
@@ -186,13 +201,6 @@ export default function ModalConductor({ isOpen, onClose, conductorId, onSuccess
 
                 {/* Body Modal */}
                 <div className="p-6 overflow-y-auto flex-1 custom-scrollbar bg-white">
-                    {error && (
-                        <div className="mb-6 p-4 bg-rose-50 text-rose-700 rounded-xl text-sm font-medium border border-rose-100 flex items-center gap-3 shadow-sm">
-                            <AlertCircle size={20} className="text-rose-500 shrink-0" />
-                            {error}
-                        </div>
-                    )}
-
                     {loadingFetch || loadingListas ? (
                         <div className="flex flex-col items-center justify-center py-16">
                             <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />

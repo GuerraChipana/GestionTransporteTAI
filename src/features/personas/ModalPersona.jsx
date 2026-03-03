@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { X, Loader2, Search, Upload, UserPlus, UserCog } from "lucide-react";
 import { crearPersona, actualizarPersona, obtenerPersonaPorId, consultarReniec } from "../../services/personaService";
 
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
+
 const formInicial = {
     dni: "",
     nombre: "",
@@ -19,7 +22,6 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
     const [loadingReniec, setLoadingReniec] = useState(false);
-    const [error, setError] = useState(null);
     const [fotoPreview, setFotoPreview] = useState(null);
 
     const isEdit = !!personaId;
@@ -33,11 +35,11 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
                     setLoadingFetch(true);
                     const data = await obtenerPersonaPorId(personaId);
 
-                    // Mapeo seguro usando los nombres exactos que envía tu PersonaResponseDto (con guion bajo por el @JsonProperty)
+                    // Mapeo seguro usando los nombres exactos que envía tu PersonaResponseDto
                     setFormData({
                         dni: data.dni || "",
                         nombre: data.nombre || "",
-                        apPaterno: data.ap_paterno || "", 
+                        apPaterno: data.ap_paterno || "",
                         apMaterno: data.ap_materno || "",
                         telefono: data.telefono || "",
                         ubigeo: data.ubigeo || "",
@@ -47,7 +49,7 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
                     });
                     if (data.foto) setFotoPreview(data.foto);
                 } catch (err) {
-                    setError("Error al cargar los datos de la persona.");
+                    onClose();
                 } finally {
                     setLoadingFetch(false);
                 }
@@ -56,7 +58,6 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
         } else if (!isEdit && isOpen) {
             setFormData(formInicial);
             setFotoPreview(null);
-            setError(null);
         }
     }, [personaId, isEdit, isOpen]);
 
@@ -64,10 +65,10 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // --- LÓGICA MÁGICA DE RENIEC ---
+    // --- LÓGICA MÁGICA DE RENIEC ACTUALIZADA ---
     const handleConsultarReniec = async () => {
         if (formData.dni.length !== 8) {
-            setError("El DNI debe tener 8 dígitos para consultar en RENIEC.");
+            toast.error("Formato inválido", { description: "El DNI debe tener 8 dígitos para consultar en RENIEC." });
             return;
         }
 
@@ -76,14 +77,13 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
 
         try {
             setLoadingReniec(true);
-            setError(null);
             const dataReniec = await consultarReniec(formData.dni, passConsulta);
 
             setFormData((prev) => ({
                 ...prev,
                 nombre: dataReniec.nombre || "",
-                apPaterno: dataReniec.apPaterno || "", // Reniec Service te devuelve apPaterno
-                apMaterno: dataReniec.apMaterno || "", // Reniec Service te devuelve apMaterno
+                apPaterno: dataReniec.apPaterno || "",
+                apMaterno: dataReniec.apMaterno || "",
                 ubigeo: dataReniec.ubigeo || "",
                 domicilio: dataReniec.direccion || "",
                 fotoBase64: dataReniec.foto || "",
@@ -93,8 +93,10 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
                 setFotoPreview(`data:image/jpeg;base64,${dataReniec.foto}`);
             }
 
+            toast.success("Datos importados exitosamente desde RENIEC.");
+
         } catch (err) {
-            setError(err.response?.data?.message || "Error al consultar RENIEC.");
+            // El error es manejado globalmente en main.jsx
         } finally {
             setLoadingReniec(false);
         }
@@ -103,20 +105,19 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoadingSubmit(true);
-        setError(null);
 
         try {
-            // Se envía formData directamente. Al estar las llaves como "apPaterno" y "apMaterno",
-            // hace match perfecto con tu PersonaDto de Spring Boot.
             if (isEdit) {
                 await actualizarPersona(personaId, formData);
+                toast.success("Persona actualizada exitosamente.");
             } else {
                 await crearPersona(formData);
+                toast.success("Persona registrada exitosamente.");
             }
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.response?.data?.message || "Ocurrió un error inesperado al guardar.");
+            // El error es manejado globalmente en main.jsx
         } finally {
             setLoadingSubmit(false);
         }
@@ -145,11 +146,6 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
 
                 {/* Body Modal */}
                 <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                    {error && (
-                        <div className="mb-5 p-3 bg-rose-50 text-rose-700 rounded-xl text-sm font-medium border border-rose-100">
-                            {error}
-                        </div>
-                    )}
 
                     {loadingFetch ? (
                         <div className="flex flex-col items-center justify-center py-10">
@@ -159,9 +155,9 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
                     ) : (
                         <form id="personaForm" onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-                            {/* Sección Superior: Foto y DNI (Ahorra espacio y se ve mejor) */}
+                            {/* Sección Superior: Foto y DNI */}
                             <div className="flex flex-col sm:flex-row gap-6 p-5 bg-slate-50 border border-slate-200 rounded-xl shadow-sm">
-                                
+
                                 {/* Foto Preview */}
                                 <div className="flex-shrink-0 flex justify-center sm:justify-start">
                                     <div className="w-24 h-28 rounded-xl border-2 border-white shadow-md overflow-hidden bg-slate-200 flex items-center justify-center">
@@ -180,21 +176,21 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
                                         {isEdit && <span className="text-rose-600 text-[10px] uppercase tracking-wider font-bold bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">Bloqueado</span>}
                                     </label>
                                     <div className="flex gap-2 items-center">
-                                        <input 
-                                            type="text" 
-                                            name="dni" 
-                                            value={formData.dni} 
-                                            onChange={handleChange} 
-                                            required 
-                                            disabled={isEdit} 
+                                        <input
+                                            type="text"
+                                            name="dni"
+                                            value={formData.dni}
+                                            onChange={handleChange}
+                                            required
+                                            disabled={isEdit}
                                             maxLength={8}
                                             placeholder="Ingrese 8 dígitos..."
-                                            className="w-full sm:max-w-[200px] p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-500 transition-all font-mono" 
+                                            className="w-full sm:max-w-[200px] p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-500 transition-all font-mono"
                                         />
                                         {!isEdit && (
-                                            <button 
-                                                type="button" 
-                                                onClick={handleConsultarReniec} 
+                                            <button
+                                                type="button"
+                                                onClick={handleConsultarReniec}
                                                 disabled={loadingReniec || formData.dni.length !== 8}
                                                 className="px-4 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-slate-800/20"
                                             >
@@ -209,11 +205,11 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
 
                             {/* Grid de Campos Restantes */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-5">
-                                
+
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nombres</label>
                                     <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required
-                                        className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-slate-700" 
+                                        className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-slate-700"
                                         placeholder="Nombres completos" />
                                 </div>
 
@@ -264,18 +260,18 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
 
                 {/* Footer Modal */}
                 <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                    <button 
-                        type="button" 
-                        onClick={onClose} 
-                        disabled={loadingSubmit || loadingFetch} 
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={loadingSubmit || loadingFetch}
                         className="px-5 py-2.5 text-slate-700 font-semibold bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
                     >
                         Cancelar
                     </button>
-                    <button 
-                        form="personaForm" 
-                        type="submit" 
-                        disabled={loadingSubmit || loadingFetch} 
+                    <button
+                        form="personaForm"
+                        type="submit"
+                        disabled={loadingSubmit || loadingFetch}
                         className="px-5 py-2.5 text-white font-semibold bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center gap-2 shadow-md shadow-blue-600/20 transition-all disabled:opacity-50"
                     >
                         {loadingSubmit && <Loader2 className="animate-spin" size={18} />}
@@ -284,11 +280,6 @@ export default function ModalPersona({ isOpen, onClose, personaId, onSuccess }) 
                 </div>
 
             </div>
-
-            <style>{`
-                @keyframes fadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(4px); } }
-                @keyframes popIn { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-            `}</style>
         </div>
     );
 }

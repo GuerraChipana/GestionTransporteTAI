@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit, Power, PowerOff, ShieldAlert, Users } from "lucide-react";
+import { Edit, Power, PowerOff, Users } from "lucide-react";
 import { listarUsuarios } from "../../services/usuarioService";
 import ModalUsuario from "../../features/usuarios/ModalUsuario";
 import ModalEstadoUsuario from "../../features/usuarios/ModalEstadoUsuario";
@@ -11,7 +11,6 @@ import TablePagination from "../../components/ui/TablePagination.jsx";
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errorGlobal, setErrorGlobal] = useState(null);
 
   // --- ESTADOS DE TABLA (Busqueda, Filtro y Paginación) ---
   const [busqueda, setBusqueda] = useState("");
@@ -19,7 +18,7 @@ export default function Usuarios() {
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 10;
 
-  // Control de Modales (Guardamos el ID en lugar del objeto completo)
+  // Control de Modales
   const [modalFormOpen, setModalFormOpen] = useState(false);
   const [modalStatusOpen, setModalStatusOpen] = useState(false);
   const [usuarioSeleccionadoId, setUsuarioSeleccionadoId] = useState(null);
@@ -27,12 +26,11 @@ export default function Usuarios() {
   const cargarUsuarios = async () => {
     try {
       setLoading(true);
-      setErrorGlobal(null);
       const data = await listarUsuarios();
       setUsuarios(data);
     } catch (error) {
-      setErrorGlobal("No se pudieron cargar los usuarios. Verifica tu conexión.");
       console.error(error);
+      // El toast rojo de error de red lo lanza el main.jsx
     } finally {
       setLoading(false);
     }
@@ -49,14 +47,12 @@ export default function Usuarios() {
 
   // --- LÓGICA DE FILTRADO (Solo DNI + Estado) ---
   const usuariosFiltrados = usuarios.filter((u) => {
-    // 1. Filtro SOLO por DNI
     const coincideBusqueda = u.dni?.toLowerCase().includes(busqueda.toLowerCase());
 
-    // 2. Filtro por estado
     const coincideEstado =
       filtroEstado === "todos" ? true :
-      filtroEstado === "activos" ? u.estado === 1 :
-      u.estado === 0;
+        filtroEstado === "activos" ? u.estado === 1 :
+          u.estado === 0;
 
     return coincideBusqueda && coincideEstado;
   });
@@ -80,7 +76,6 @@ export default function Usuarios() {
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm p-6 border border-slate-100 overflow-hidden">
 
-      {/* Uso de nuestro componente reutilizable de cabecera */}
       <TableToolbar
         busqueda={busqueda}
         setBusqueda={setBusqueda}
@@ -90,14 +85,6 @@ export default function Usuarios() {
         addLabel="Nuevo Usuario"
         searchPlaceholder="Buscar por DNI..."
       />
-
-      {/* Manejo de Error Global */}
-      {errorGlobal && (
-        <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-3">
-          <ShieldAlert size={20} />
-          <p>{errorGlobal}</p>
-        </div>
-      )}
 
       {/* Tabla Responsiva */}
       <div className="overflow-x-auto rounded-t-xl border border-slate-200">
@@ -139,7 +126,6 @@ export default function Usuarios() {
               usuariosPaginados.map((u, index) => (
                 <tr key={u.id_user} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4 text-sm font-medium text-slate-600">
-                    {/* Número real correlativo */}
                     {indicePrimerRegistro + index + 1}
                   </td>
                   <td className="p-4 text-sm font-bold text-slate-800 font-mono">{u.dni}</td>
@@ -174,7 +160,7 @@ export default function Usuarios() {
       </div>
 
       {/* Uso de nuestro componente reutilizable de Paginación */}
-      {!loading && !errorGlobal && (
+      {!loading && (
         <TablePagination
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
@@ -190,7 +176,7 @@ export default function Usuarios() {
         <ModalUsuario
           isOpen={modalFormOpen}
           onClose={() => setModalFormOpen(false)}
-          usuarioId={usuarioSeleccionadoId} // Pasamos solo el ID
+          usuarioId={usuarioSeleccionadoId}
           onSuccess={cargarUsuarios}
         />
       )}

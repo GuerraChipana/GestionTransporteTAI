@@ -4,9 +4,11 @@ import { listarAsociaciones, cambiarEstadoAsociacion } from "../../services/asoc
 import ModalAsociacion from "../../features/asocicaciones/ModalAsociacion.jsx";
 import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 
-// Importamos nuestros componentes reutilizables
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
+
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
 
 export default function Asociaciones() {
   const [asociaciones, setAsociaciones] = useState([]);
@@ -84,15 +86,22 @@ export default function Asociaciones() {
     setModalEstadoOpen(true);
   };
 
-  // --- HANDLER CAMBIO DE ESTADO ---
+  // --- HANDLER CAMBIO DE ESTADO ACTUALIZADO ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoAsociacion(asociacionSeleccionada.idAsoci, datosEstado);
+
       setModalEstadoOpen(false);
       cargarAsociaciones();
+
+      // Mensaje de éxito
+      const accion = datosEstado.estado === 1 ? "activada" : "dada de baja";
+      toast.success(`Asociación ${accion} exitosamente.`);
+
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      // El error lo maneja automáticamente main.jsx
+      setModalEstadoOpen(false);
     } finally {
       setLoadingEstado(false);
     }

@@ -5,9 +5,11 @@ import ModalPersona from "../../features/personas/ModalPersona.jsx";
 import ModalVerPersona from "../../features/personas/ModalVerPersona.jsx";
 import ModalCambioEstado from "../../components/ui/ModalCambioEstado";
 
-// Importamos nuestros componentes reutilizables
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
+
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
 
 export default function Personas() {
   const [personas, setPersonas] = useState([]);
@@ -81,15 +83,18 @@ export default function Personas() {
   const handleOpenVer = (persona) => { setPersonaSeleccionada(persona); setModalVerOpen(true); };
   const handleOpenEstado = (persona) => { setPersonaSeleccionada(persona); setModalEstadoOpen(true); };
 
-  // --- HANDLER PARA PROCESAR EL CAMBIO DE ESTADO ---
+  // --- HANDLER PARA PROCESAR EL CAMBIO DE ESTADO ACTUALIZADO ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoPersona(personaSeleccionada.idPers, datosEstado);
       setModalEstadoOpen(false);
       cargarPersonas();
+
+      const accion = datosEstado.estado === 1 ? "activada" : "dada de baja";
+      toast.success(`Persona ${accion} exitosamente.`);
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      setModalEstadoOpen(false);
     } finally {
       setLoadingEstado(false);
     }

@@ -5,9 +5,11 @@ import ModalVerVehiculo from "../../features/vehiculos/ModalVerVehiculo.jsx";
 import ModalCambioEstado from "../../components/ui/ModalCambioEstado";
 import ModalVehiculo from "../../features/vehiculos/ModalVehiculo.jsx";
 
-// Importamos nuestros componentes reutilizables
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
+
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
 
 export default function Vehiculos() {
   const [vehiculos, setVehiculos] = useState([]);
@@ -22,7 +24,7 @@ export default function Vehiculos() {
   const [modalFormOpen, setModalFormOpen] = useState(false);
   const [modalEstadoOpen, setModalEstadoOpen] = useState(false);
   const [modalVerOpen, setModalVerOpen] = useState(false);
-  
+
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState(null);
   const [loadingEstado, setLoadingEstado] = useState(false);
 
@@ -50,15 +52,15 @@ export default function Vehiculos() {
   // --- LÓGICA DE FILTRADO (Placa + Estado) ---
   const vehiculosFiltrados = vehiculos.filter((v) => {
     const termino = busqueda.toLowerCase();
-    
+
     // Filtro por placa
     const coincideBusqueda = v.placa?.toLowerCase().includes(termino);
 
     // Filtro por estado
-    const coincideEstado = 
-      filtroEstado === "todos" ? true : 
-      filtroEstado === "activos" ? v.estado === 1 : 
-      v.estado === 0;
+    const coincideEstado =
+      filtroEstado === "todos" ? true :
+        filtroEstado === "activos" ? v.estado === 1 :
+          v.estado === 0;
 
     return coincideBusqueda && coincideEstado;
   });
@@ -90,14 +92,20 @@ export default function Vehiculos() {
     setModalVerOpen(true);
   };
 
+  // --- HANDLER CAMBIO DE ESTADO ACTUALIZADO ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoVehiculo(vehiculoSeleccionado.idVehi, datosEstado);
+
       setModalEstadoOpen(false);
       cargarVehiculos();
+
+      const accion = datosEstado.estado === 1 ? "activado" : "dado de baja";
+      toast.success(`Vehículo ${accion} exitosamente.`);
+
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      setModalEstadoOpen(false); // El interceptor ya muestra la alerta roja
     } finally {
       setLoadingEstado(false);
     }
@@ -107,7 +115,7 @@ export default function Vehiculos() {
     <div className="p-6 animate-[fadeIn_0.3s_ease-out]">
 
       {/* Uso de nuestro componente reutilizable de cabecera */}
-      <TableToolbar 
+      <TableToolbar
         busqueda={busqueda}
         setBusqueda={setBusqueda}
         filtroEstado={filtroEstado}
@@ -155,7 +163,6 @@ export default function Vehiculos() {
               ) : vehiculosPaginados.map((v, index) => (
                 <tr key={v.idVehi} className="hover:bg-slate-50 transition-colors group">
                   <td className="p-4 text-sm font-medium text-slate-600">
-                    {/* Número real correlativo */}
                     {indicePrimerRegistro + index + 1}
                   </td>
                   <td className="p-4">
@@ -212,7 +219,7 @@ export default function Vehiculos() {
 
       {/* Uso de nuestro componente reutilizable de Paginación */}
       {!loading && (
-        <TablePagination 
+        <TablePagination
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
           totalRegistros={vehiculosFiltrados.length}

@@ -11,6 +11,7 @@ import Aseguradoras from '../pages/dashboard/Aseguradoras.jsx';
 import Vehiculos from '../pages/dashboard/Vehiculos';
 import VehiculosSeguros from '../pages/dashboard/VehiculosSeguros';
 import Conductores from '../pages/dashboard/Conductores.jsx';
+import Reportes from '../pages/dashboard/Reportes.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import Inicio from '../pages/Inicio.jsx';
 import InicioPrincipal from '../pages/InicioPrincipal.jsx';
@@ -58,6 +59,7 @@ export default function AppRouter() {
           <Route path="vehiculos-seguros" element={<VehiculosSeguros />} />
           <Route path="vehiculos" element={<Vehiculos />} />
           <Route path="conductores" element={<Conductores />} />
+          <Route path="reportes" element={<Reportes />} />
         </Route>
 
         {/* === RUTA NO EXISTE → REDIRIGE AL INICIO === */}

@@ -3,6 +3,7 @@ import { X, Loader2, UserCircle } from "lucide-react";
 import { crearUsuario, actualizarUsuario, obtenerUsuarioPorId } from "../../services/usuarioService";
 import { useNavigate } from "react-router-dom";
 import { getTokenData } from "../../utils/tokenUtils";
+import { toast } from "sonner";
 
 const formInicial = {
   nombre: "", apPaterno: "", apMaterno: "",
@@ -14,19 +15,18 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
   const [formData, setFormData] = useState(formInicial);
   const [loadingFetch, setLoadingFetch] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-  const [error, setError] = useState(null);
-  
+
   const userID = getTokenData();
   const isEdit = !!usuarioId;
 
-  // Efecto Profesional: Traer datos frescos desde la BD si es edición
+  // Traer datos frescos desde la BD si es edición
   useEffect(() => {
     if (isEdit && isOpen) {
       const fetchUsuario = async () => {
         try {
           setLoadingFetch(true);
           const data = await obtenerUsuarioPorId(usuarioId);
-          // Mapeamos los datos de la BD al formulario
+
           setFormData({
             nombre: data.nombre || "",
             apPaterno: data.ap_paterno || "",
@@ -38,7 +38,8 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
             rol: data.rol?.toLowerCase() || "administrador",
           });
         } catch (err) {
-          setError("Error al cargar los datos del usuario para editar.");
+          // El interceptor mostrará el error en pantalla
+          onClose();
         } finally {
           setLoadingFetch(false);
         }
@@ -46,7 +47,6 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
       fetchUsuario();
     } else if (!isEdit && isOpen) {
       setFormData(formInicial);
-      setError(null);
     }
   }, [usuarioId, isEdit, isOpen]);
 
@@ -57,7 +57,6 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoadingSubmit(true);
-    setError(null);
 
     try {
       if (isEdit) {
@@ -66,27 +65,26 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
 
         const userIdLogueado = userID?.id;
 
+        // Si el usuario editó sus propios datos, lo deslogueamos por seguridad
         if (userIdLogueado && String(usuarioId) === String(userIdLogueado)) {
-          alert("Actualizaste tus propios datos. Inicia sesión nuevamente.");
-          localStorage.clear(); // elimina token y datos
+          toast.success("Actualizaste tus propios datos. Inicia sesión nuevamente.", { duration: 5000 });
+          localStorage.clear();
           navigate("/administracion-login");
           return;
         }
 
+        toast.success("Usuario actualizado exitosamente.");
       } else {
         await crearUsuario(formData);
+        toast.success("Usuario registrado exitosamente.");
       }
 
       onSuccess();
       onClose();
 
     } catch (err) {
-      const msg =
-        err.message ||
-        (err.errors
-          ? Object.values(err.errors).join(", ")
-          : "Ocurrió un error inesperado.");
-      setError(msg);
+      // Los errores (ej. "El DNI ya existe", "El correo ya está en uso") 
+      // son atrapados y mostrados visualmente por el main.jsx
     } finally {
       setLoadingSubmit(false);
     }
@@ -115,11 +113,6 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
 
         {/* Body Modal */}
         <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-          {error && (
-            <div className="mb-5 p-3 bg-red-50 text-red-700 rounded-lg text-sm font-medium border border-red-100">
-              {error}
-            </div>
-          )}
 
           {loadingFetch ? (
             <div className="flex flex-col items-center justify-center py-10">
@@ -131,18 +124,18 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                  DNI 
+                  DNI
                   {isEdit && <span className="text-rose-500 text-[10px] uppercase tracking-wider font-bold bg-rose-50 px-2 py-0.5 rounded-md">Bloqueado</span>}
                 </label>
                 <input type="text" name="dni" value={formData.dni} onChange={handleChange} required disabled={isEdit} maxLength={8} pattern="\d{8}" title="Debe contener 8 dígitos"
-                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed transition-all text-slate-700 font-mono" 
+                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed transition-all text-slate-700 font-mono"
                   placeholder="Ej: 71234567" />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nombre</label>
                 <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required minLength={2} maxLength={50}
-                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700" 
+                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700"
                   placeholder="Nombres del usuario" />
               </div>
 
@@ -161,14 +154,14 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Correo Electrónico</label>
                 <input type="email" name="correo" value={formData.correo} onChange={handleChange} required
-                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700" 
+                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700"
                   placeholder="correo@ejemplo.com" />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Usuario (Login)</label>
                 <input type="text" name="usuario" value={formData.usuario} onChange={handleChange} required minLength={4} maxLength={30}
-                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium" 
+                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium"
                   placeholder="Nombre de usuario" />
               </div>
 
@@ -176,7 +169,7 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contraseña</label>
                   <input type="password" name="contrasena" value={formData.contrasena} onChange={handleChange} required minLength={8}
-                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700" 
+                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700"
                     placeholder="Mínimo 8 caracteres" />
                 </div>
               )}
@@ -198,18 +191,18 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
 
         {/* Footer Modal */}
         <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-          <button 
-            type="button" 
-            onClick={onClose} 
-            disabled={loadingSubmit || loadingFetch} 
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loadingSubmit || loadingFetch}
             className="px-5 py-2.5 text-slate-700 font-semibold bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
-          <button 
-            form="userForm" 
-            type="submit" 
-            disabled={loadingSubmit || loadingFetch} 
+          <button
+            form="userForm"
+            type="submit"
+            disabled={loadingSubmit || loadingFetch}
             className="px-5 py-2.5 text-white font-semibold bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center gap-2 shadow-md shadow-blue-600/20 transition-all disabled:opacity-50"
           >
             {loadingSubmit && <Loader2 className="animate-spin" size={18} />}
@@ -217,11 +210,6 @@ export default function ModalUsuario({ isOpen, onClose, usuarioId, onSuccess }) 
           </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(4px); } }
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-      `}</style>
     </div>
   );
 }

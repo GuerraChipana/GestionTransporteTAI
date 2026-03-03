@@ -8,6 +8,8 @@ import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
 
+import { toast } from "sonner";
+
 export default function Aseguradoras() {
     const [aseguradoras, setAseguradoras] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -84,8 +86,11 @@ export default function Aseguradoras() {
             await cambiarEstadoAseguradora(aseguradoraSeleccionada.idAseg, datosEstado);
             setModalEstadoOpen(false);
             cargarAseguradoras();
+            
+            const accion = datosEstado.estado === 1 ? "activada" : "dada de baja";
+            toast.success(`Aseguradora ${accion} exitosamente.`);
         } catch (error) {
-            alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+            setModalEstadoOpen(false); // El error lo maneja el interceptor en main.jsx
         } finally {
             setLoadingEstado(false);
         }
@@ -140,7 +145,6 @@ export default function Aseguradoras() {
                             aseguradorasPaginadas.map((a, index) => (
                                 <tr key={a.idAseg} className="hover:bg-slate-50 transition-colors">
                                     <td className="p-4 text-sm font-medium text-slate-600">
-                                        {/* Número real correlativo */}
                                         {indicePrimerRegistro + index + 1}
                                     </td>
                                     <td className="p-4 text-sm font-bold text-slate-800">{a.aseguradora}</td>

@@ -3,6 +3,9 @@ import { X, Loader2, Upload, BusFront, Users, Search, CheckCircle, AlertCircle }
 import { crearVehiculo, actualizarVehiculo, obtenerVehiculoPorId } from "../../services/vehiculoService";
 import { listarPersonas } from "../../services/personaService";
 
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
+
 const formInicial = {
     placa: "",
     nTarjeta: "",
@@ -10,34 +13,39 @@ const formInicial = {
     marca: "",
     color: "",
     ano_de_compra: "",
-    propietario1Id: "", 
-    propietario2Id: "", 
+    propietario1Id: "",
+    propietario2Id: "",
 };
+
+const marcasMototaxi = [
+    "BAJAJ", "TVS", "HONDA", "YAMAHA", "ZONGSHEN", "LIFAN"
+];
+
+const coloresVehiculo = [
+    "Blanco", "Negro", "Rojo", "Azul", "Verde", "Amarillo",
+    "Gris", "Plateado", "Mostaza", "Naranja", "Marrón"
+];
 
 export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }) {
     const [formData, setFormData] = useState(formInicial);
     const [imagenFile, setImagenFile] = useState(null);
     const [fotoPreview, setFotoPreview] = useState(null);
-    
-    // Lista de personas para el buscador por DNI
+
     const [listaPersonas, setListaPersonas] = useState([]);
 
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
-    const [error, setError] = useState(null);
 
     const isEdit = !!vehiculoId;
 
-    // Cargar la lista de personas al abrir el modal para poder buscar por DNI
     useEffect(() => {
         if (isOpen) {
             listarPersonas()
                 .then(data => setListaPersonas(data))
-                .catch(() => console.error("Error al cargar la lista de personas para el buscador."));
+                .catch(() => toast.error("Error al cargar el buscador de propietarios."));
         }
     }, [isOpen]);
 
-    // Cargar datos del vehículo si estamos en modo edición
     useEffect(() => {
         if (isOpen && isEdit && vehiculoId && typeof vehiculoId !== 'object') {
             const fetchVehiculo = async () => {
@@ -51,12 +59,12 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
                         marca: data.marca || "",
                         color: data.color || "",
                         ano_de_compra: data.anoDeCompra || "",
-                        propietario1Id: data.propietario1?.id_pers || "", 
-                        propietario2Id: data.propietario2?.id_pers || "", 
+                        propietario1Id: data.propietario1?.id_pers || "",
+                        propietario2Id: data.propietario2?.id_pers || "",
                     });
                     if (data.imagenUrl) setFotoPreview(data.imagenUrl);
                 } catch (err) {
-                    setError("Error al cargar los datos del vehículo.");
+                    onClose(); // El interceptor ya mostrará la alerta
                 } finally {
                     setLoadingFetch(false);
                 }
@@ -66,7 +74,6 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
             setFormData(formInicial);
             setImagenFile(null);
             setFotoPreview(null);
-            setError(null);
         }
     }, [vehiculoId, isEdit, isOpen]);
 
@@ -74,7 +81,6 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // Manejador específico para los IDs que vienen del Buscador por DNI
     const handlePropietarioChange = (campo, id) => {
         setFormData(prev => ({ ...prev, [campo]: id }));
     };
@@ -89,38 +95,39 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoadingSubmit(true);
-        setError(null);
 
+        // Validación Frontend
         if (!formData.propietario1Id) {
-            setError("Debe especificar al menos un Propietario principal válido (DNI registrado).");
-            setLoadingSubmit(false);
+            toast.error("Datos incompletos", { description: "Debe especificar al menos un Propietario principal válido (DNI registrado)." });
             return;
         }
 
+        setLoadingSubmit(true);
+
         try {
             const submitData = new FormData();
-            
+
             Object.keys(formData).forEach(key => {
-                // Solo enviamos si tiene valor, para no mandar vacíos en propietario2Id
                 if (formData[key] !== "" && formData[key] !== null && formData[key] !== undefined) {
                     submitData.append(key, formData[key]);
                 }
             });
 
             if (imagenFile) {
-                submitData.append("imagen", imagenFile); 
+                submitData.append("imagen", imagenFile);
             }
 
             if (isEdit) {
                 await actualizarVehiculo(vehiculoId, submitData);
+                toast.success("Vehículo actualizado exitosamente.");
             } else {
                 await crearVehiculo(submitData);
+                toast.success("Vehículo registrado exitosamente.");
             }
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.message || "Ocurrió un error inesperado al guardar.");
+            // Error manejado globalmente por main.jsx
         } finally {
             setLoadingSubmit(false);
         }
@@ -131,7 +138,7 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-[fadeIn_0.25s_ease-out]">
             <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]">
-                
+
                 <div className="h-2 w-full bg-slate-800"></div>
                 <div className="flex justify-between items-center p-5 border-b bg-slate-50">
                     <div className="flex items-center gap-2 text-slate-800">
@@ -146,10 +153,6 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
                 </div>
 
                 <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                    {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100 flex items-start gap-2">
-                        <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                        <span>{error}</span>
-                    </div>}
 
                     {loadingFetch ? (
                         <div className="flex flex-col items-center justify-center py-10">
@@ -158,7 +161,7 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
                         </div>
                     ) : (
                         <form id="vehiculoForm" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            
+
                             {/* Imagen */}
                             <div className="md:col-span-2 flex flex-col items-center mb-2">
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fotografía del Vehículo (Opcional)</label>
@@ -175,10 +178,42 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
                                 </div>
                             </div>
 
-                            {/* Campos Básicos (Acorde al DTO) */}
+                            {/* Campos Básicos */}
                             <Input name="placa" label="Placa" value={formData.placa} onChange={handleChange} required />
-                            <Input name="marca" label="Marca" value={formData.marca} onChange={handleChange} required />
-                            <Input name="color" label="Color" value={formData.color} onChange={handleChange} required />
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                    Marca <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    name="marca"
+                                    value={formData.marca}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium text-slate-800"
+                                >
+                                    <option value="">Seleccione una marca</option>
+                                    {marcasMototaxi.map((marca, index) => (
+                                        <option key={index} value={marca}>{marca}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                    Color <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    name="color"
+                                    value={formData.color}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium text-slate-800"
+                                >
+                                    <option value="">Seleccione un color</option>
+                                    {coloresVehiculo.map((color, index) => (
+                                        <option key={index} value={color}>{color}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <Input name="ano_de_compra" label="Año de Compra" type="number" value={formData.ano_de_compra} onChange={handleChange} required />
                             <Input name="nMotor" label="Nro. de Motor" value={formData.nMotor} onChange={handleChange} required />
                             <Input name="nTarjeta" label="Nro. Tarjeta de Propiedad" value={formData.nTarjeta} onChange={handleChange} required />
@@ -186,19 +221,19 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
                             {/* Buscadores de Propietarios */}
                             <div className="md:col-span-2 mt-2 pt-5 border-t border-slate-100">
                                 <h4 className="flex items-center gap-2 text-sm font-bold text-slate-700 uppercase mb-4">
-                                    <Users size={18} className="text-slate-400"/>
+                                    <Users size={18} className="text-slate-400" />
                                     Datos de los Propietarios (Búsqueda por DNI)
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <BuscadorPersona 
-                                        label="Propietario 1" 
+                                    <BuscadorPersona
+                                        label="Propietario 1"
                                         required={true}
                                         personas={listaPersonas}
                                         idSeleccionado={formData.propietario1Id}
                                         onSelect={(id) => handlePropietarioChange("propietario1Id", id)}
                                     />
-                                    <BuscadorPersona 
-                                        label="Propietario 2 (Opcional)" 
+                                    <BuscadorPersona
+                                        label="Propietario 2 (Opcional)"
                                         required={false}
                                         personas={listaPersonas}
                                         idSeleccionado={formData.propietario2Id}
@@ -222,8 +257,7 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
                     </button>
                 </div>
             </div>
-            
-            {/* Estilos inyectados */}
+
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(4px); } }
                 @keyframes popIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
@@ -236,14 +270,13 @@ export default function ModalVehiculo({ isOpen, onClose, vehiculoId, onSuccess }
 // SUBCOMPONENTES
 // ----------------------------------------------------------------------
 
-// Componente para inputs de texto básicos
 function Input({ label, name, value, onChange, type = "text", required = false }) {
     return (
         <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                 {label} {required && <span className="text-rose-500">*</span>}
             </label>
-            <input 
+            <input
                 type={type} name={name} value={value} onChange={onChange} required={required}
                 className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm font-medium text-slate-800"
             />
@@ -251,15 +284,12 @@ function Input({ label, name, value, onChange, type = "text", required = false }
     );
 }
 
-// Componente Inteligente para buscar Persona por DNI
 function BuscadorPersona({ label, required, personas, idSeleccionado, onSelect }) {
     const [dni, setDni] = useState("");
     const [personaEncontrada, setPersonaEncontrada] = useState(null);
 
-    // Efecto para sincronizar si viene un ID de edición
     useEffect(() => {
         if (idSeleccionado && personas.length > 0) {
-            // Buscamos la persona por idPers
             const p = personas.find(x => x.idPers === idSeleccionado || x.id_pers === idSeleccionado);
             if (p) {
                 setDni(p.dni);
@@ -272,23 +302,21 @@ function BuscadorPersona({ label, required, personas, idSeleccionado, onSelect }
     }, [idSeleccionado, personas]);
 
     const handleDniChange = (e) => {
-        // Solo permitir números, máximo 8 dígitos
         const val = e.target.value.replace(/\D/g, '').slice(0, 8);
         setDni(val);
 
         if (val.length === 8) {
-            // Buscar automáticamente en la lista cuando llega a 8 dígitos
             const found = personas.find(x => x.dni === val);
             if (found) {
                 setPersonaEncontrada(found);
-                onSelect(found.idPers || found.id_pers); // Pasamos el ID real al formulario principal
+                onSelect(found.idPers || found.id_pers);
             } else {
                 setPersonaEncontrada(null);
-                onSelect(""); // Limpiamos si no existe
+                onSelect(""); 
             }
         } else {
             setPersonaEncontrada(null);
-            onSelect(""); 
+            onSelect("");
         }
     };
 
@@ -297,25 +325,23 @@ function BuscadorPersona({ label, required, personas, idSeleccionado, onSelect }
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                 {label} {required && <span className="text-rose-500">*</span>}
             </label>
-            
+
             <div className="relative mb-2">
                 <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     placeholder="Ingresar DNI (8 dígitos)"
                     value={dni}
                     onChange={handleDniChange}
                     required={required && !personaEncontrada}
-                    className={`w-full pl-10 p-2 border rounded-lg outline-none text-sm transition-shadow font-medium ${
-                        dni.length === 8 && !personaEncontrada 
-                        ? "border-rose-400 focus:ring-2 focus:ring-rose-200" 
+                    className={`w-full pl-10 p-2 border rounded-lg outline-none text-sm transition-shadow font-medium ${dni.length === 8 && !personaEncontrada
+                        ? "border-rose-400 focus:ring-2 focus:ring-rose-200"
                         : "border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    }`}
+                        }`}
                 />
             </div>
 
-            {/* Resultado de Búsqueda Visual */}
-            <div className="h-10"> 
+            <div className="h-10">
                 {personaEncontrada ? (
                     <div className="flex items-center gap-2 p-2 bg-emerald-100 text-emerald-800 rounded text-xs font-bold border border-emerald-200">
                         <CheckCircle size={16} className="text-emerald-600 shrink-0" />

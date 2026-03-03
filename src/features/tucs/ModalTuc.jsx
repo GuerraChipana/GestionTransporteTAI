@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { X, Loader2, CreditCard, Hash, Calendar, FileText } from "lucide-react";
 import { crearTuc, actualizarTuc, obtenerTucPorId } from "../../services/tucService";
 import { listarEmpadronamientos } from "../../services/empadronamientoService";
-// IMPORTANTE: Ahora usamos el AutocompleteSelect local de TUCs
 import AutocompleteSelect from "./AutocompleteSelect";
+
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
 
 const formInicial = {
   numTuc: "",
@@ -16,7 +18,6 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
   const [formData, setFormData] = useState(formInicial);
   const [loadingFetch, setLoadingFetch] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-  const [error, setError] = useState(null);
 
   // Opciones para el buscador de Empadronamientos
   const [empadronamientosOpciones, setEmpadronamientosOpciones] = useState([]);
@@ -33,21 +34,17 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
         setLoadingListas(true);
 
         const listaEmpadronamientos = await listarEmpadronamientos();
-        
-        // Formateamos para el AutocompleteSelect:
-        // label: Solo el N° Padrón (Para que el usuario busque escribiendo números)
-        // subText: La Placa (Info visual extra debajo)
+
         const empaFormat = listaEmpadronamientos
           .filter(e => e.estado === 1)
           .map(e => ({
             value: e.idEmpa,
-            label: String(e.numEmpadronamiento), // Busca solo por Padrón
-            subText: `Placa: ${e.vehiculo?.placa || 'N/A'}` // Info Extra
+            label: String(e.numEmpadronamiento),
+            subText: `Placa: ${e.vehiculo?.placa || 'N/A'}`
           }));
 
         setEmpadronamientosOpciones(empaFormat);
 
-        // 2. Si es edición, cargamos los datos de la TUC
         const esIdValido = tucId && typeof tucId !== 'object';
         if (isEdit && esIdValido) {
           const data = await obtenerTucPorId(tucId);
@@ -61,7 +58,7 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
           setFormData(formInicial);
         }
       } catch (err) {
-        setError("Error al cargar los datos del sistema.");
+        onClose(); // Si falla la carga, cerramos el modal
       } finally {
         setLoadingFetch(false);
         setLoadingListas(false);
@@ -75,12 +72,11 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
     e.preventDefault();
 
     if (!formData.idEmpa) {
-      setError("Debe seleccionar un empadronamiento vinculado.");
+      toast.error("Datos incompletos", { description: "Debe seleccionar un empadronamiento vinculado." });
       return;
     }
 
     setLoadingSubmit(true);
-    setError(null);
 
     try {
       const payload = {
@@ -92,13 +88,15 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
 
       if (isEdit) {
         await actualizarTuc(tucId, payload);
+        toast.success("Tarjeta TUC actualizada exitosamente.");
       } else {
         await crearTuc(payload);
+        toast.success("Tarjeta TUC emitida exitosamente.");
       }
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || "Ocurrió un error inesperado al guardar.");
+      // El error rojo se maneja solo gracias al interceptor en main.jsx
     } finally {
       setLoadingSubmit(false);
     }
@@ -127,13 +125,6 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
 
         {/* Body Modal */}
         <div className="p-6 overflow-visible">
-          {error && (
-            <div className="mb-5 p-4 bg-rose-50 text-rose-700 rounded-xl text-sm font-medium border border-rose-100 flex items-center gap-2 shadow-sm">
-              <X size={18} className="shrink-0" />
-              {error}
-            </div>
-          )}
-
           {loadingFetch || loadingListas ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="animate-spin text-blue-600 mb-3" size={36} />
@@ -142,7 +133,7 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
           ) : (
             <form id="tucForm" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-              {/* Padrón Vinculado - AHORA USA AUTOCOMPLETESELECT */}
+              {/* Padrón Vinculado */}
               <div className="md:col-span-2">
                 <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider">
                   <FileText size={14} className="text-blue-500" />
@@ -206,7 +197,7 @@ export default function ModalTuc({ isOpen, onClose, tucId, onSuccess }) {
                   className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-slate-700 bg-slate-50 cursor-pointer shadow-sm"
                 />
                 <p className="text-[11px] text-slate-500 mt-2 font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex items-center gap-2">
-                  <span className="text-blue-500">💡</span> 
+                  <span className="text-blue-500">💡</span>
                   La fecha de vencimiento (Hasta) se calculará automáticamente sumando 1 año.
                 </p>
               </div>

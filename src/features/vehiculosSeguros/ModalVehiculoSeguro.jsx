@@ -9,6 +9,9 @@ import { listarVehiculos } from "../../services/vehiculoService";
 import { listarAseguradoras } from "../../services/aseguradoraService";
 import SelectBuscador from "../../components/ui/SelectBuscador";
 
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
+
 const formInicial = {
     idVehiculo: "",
     idAseguradora: "",
@@ -21,7 +24,6 @@ export default function ModalVehiculoSeguro({ isOpen, onClose, seguroId, onSucce
     const [formData, setFormData] = useState(formInicial);
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
-    const [error, setError] = useState(null);
 
     // Estados para los Selectores
     const [vehiculosOpciones, setVehiculosOpciones] = useState([]);
@@ -77,7 +79,8 @@ export default function ModalVehiculoSeguro({ isOpen, onClose, seguroId, onSucce
                     setFormData(formInicial);
                 }
             } catch (err) {
-                setError("Error al cargar los datos del sistema.");
+                // Si falla, cerramos el modal, el interceptor muestra el error visual
+                onClose();
             } finally {
                 setLoadingFetch(false);
                 setLoadingListas(false);
@@ -92,18 +95,17 @@ export default function ModalVehiculoSeguro({ isOpen, onClose, seguroId, onSucce
 
         // Validación de Selectores
         if (!formData.idVehiculo || !formData.idAseguradora) {
-            setError("Debe seleccionar un vehículo y una aseguradora.");
+            toast.error("Datos incompletos", { description: "Debe seleccionar un vehículo y una aseguradora." });
             return;
         }
 
         // Validación de fechas
         if (new Date(formData.fecha_vigencia_desde) > new Date(formData.fecha_vigencia_hasta)) {
-            setError("La fecha de inicio no puede ser mayor a la fecha de fin.");
+            toast.error("Fechas inválidas", { description: "La fecha de inicio no puede ser mayor a la fecha de fin." });
             return;
         }
 
         setLoadingSubmit(true);
-        setError(null);
 
         try {
             const payload = {
@@ -114,13 +116,15 @@ export default function ModalVehiculoSeguro({ isOpen, onClose, seguroId, onSucce
 
             if (isEdit) {
                 await actualizarVehiculoSeguro(seguroId, payload);
+                toast.success("Seguro vehicular actualizado exitosamente.");
             } else {
                 await crearVehiculoSeguro(payload);
+                toast.success("Seguro vehicular registrado exitosamente.");
             }
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.response?.data?.message || "Ocurrió un error inesperado al guardar.");
+            // El error es manejado en main.jsx
         } finally {
             setLoadingSubmit(false);
         }
@@ -149,12 +153,6 @@ export default function ModalVehiculoSeguro({ isOpen, onClose, seguroId, onSucce
 
                 {/* Body Modal */}
                 <div className="p-6 overflow-visible">
-                    {error && (
-                        <div className="mb-6 p-4 bg-rose-50 text-rose-700 rounded-xl text-sm font-medium border border-rose-100 flex items-center gap-2 shadow-sm">
-                            <X size={18} className="text-rose-500 shrink-0" />
-                            {error}
-                        </div>
-                    )}
 
                     {loadingFetch || loadingListas ? (
                         <div className="flex flex-col items-center justify-center py-12">

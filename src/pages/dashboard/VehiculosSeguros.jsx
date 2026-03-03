@@ -9,6 +9,9 @@ import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
 
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
+
 export default function VehiculosSeguros() {
   const [seguros, setSeguros] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,15 +57,15 @@ export default function VehiculosSeguros() {
     const poliza = s.numPoliza?.toLowerCase() || "";
     const placa = s.vehiculo?.placa?.toLowerCase() || "";
     const aseguradora = s.aseguradora?.aseguradora?.toLowerCase() || "";
-    
+
     // Búsqueda en cualquiera de los 3 campos
     const coincideBusqueda = poliza.includes(term) || placa.includes(term) || aseguradora.includes(term);
 
     // Filtro por estado del registro (Activo/Baja)
-    const coincideEstado = 
-      filtroEstado === "todos" ? true : 
-      filtroEstado === "activos" ? s.estado === 1 : 
-      s.estado === 0;
+    const coincideEstado =
+      filtroEstado === "todos" ? true :
+        filtroEstado === "activos" ? s.estado === 1 :
+          s.estado === 0;
 
     return coincideBusqueda && coincideEstado;
   });
@@ -79,14 +82,20 @@ export default function VehiculosSeguros() {
   const handleOpenVer = (seguro) => { setSeguroSeleccionado(seguro); setModalVerOpen(true); };
   const handleOpenEstado = (seguro) => { setSeguroSeleccionado(seguro); setModalEstadoOpen(true); };
 
+  // --- HANDLER CAMBIO DE ESTADO ACTUALIZADO ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoVehiculoSeguro(seguroSeleccionado.id_vehseg, datosEstado);
+
       setModalEstadoOpen(false);
       cargarSeguros();
+
+      const accion = datosEstado.estado === 1 ? "activado" : "dado de baja";
+      toast.success(`Seguro de Vehículo ${accion} exitosamente.`);
+
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      setModalEstadoOpen(false); // El interceptor global maneja el error visual
     } finally {
       setLoadingEstado(false);
     }
@@ -96,7 +105,7 @@ export default function VehiculosSeguros() {
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm p-6 border border-slate-100 overflow-hidden">
 
       {/* Uso de nuestro componente reutilizable de cabecera */}
-      <TableToolbar 
+      <TableToolbar
         busqueda={busqueda}
         setBusqueda={setBusqueda}
         filtroEstado={filtroEstado}
@@ -196,7 +205,7 @@ export default function VehiculosSeguros() {
 
       {/* Uso de nuestro componente reutilizable de Paginación */}
       {!loading && (
-        <TablePagination 
+        <TablePagination
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
           totalRegistros={segurosFiltrados.length}

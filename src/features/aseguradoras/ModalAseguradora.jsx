@@ -6,6 +6,8 @@ import {
     obtenerAseguradoraPorId
 } from "../../services/aseguradoraService";
 
+import { toast } from "sonner";
+
 const formInicial = {
     aseguradora: "",
 };
@@ -14,7 +16,6 @@ export default function ModalAseguradora({ isOpen, onClose, aseguradoraId, onSuc
     const [formData, setFormData] = useState(formInicial);
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
-    const [error, setError] = useState(null);
 
     const isEdit = !!aseguradoraId;
 
@@ -30,7 +31,8 @@ export default function ModalAseguradora({ isOpen, onClose, aseguradoraId, onSuc
                         aseguradora: data.aseguradora || "",
                     });
                 } catch (err) {
-                    setError("Error al cargar los datos de la aseguradora.");
+                    // Si falla la carga, cerramos el modal
+                    onClose();
                 } finally {
                     setLoadingFetch(false);
                 }
@@ -38,7 +40,6 @@ export default function ModalAseguradora({ isOpen, onClose, aseguradoraId, onSuc
             fetchAseguradora();
         } else if (!isEdit && isOpen) {
             setFormData(formInicial);
-            setError(null);
         }
     }, [aseguradoraId, isEdit, isOpen]);
 
@@ -49,18 +50,20 @@ export default function ModalAseguradora({ isOpen, onClose, aseguradoraId, onSuc
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoadingSubmit(true);
-        setError(null);
 
         try {
             if (isEdit) {
                 await actualizarAseguradora(aseguradoraId, formData);
+                toast.success("Aseguradora actualizada exitosamente.");
             } else {
                 await crearAseguradora(formData);
+                toast.success("Aseguradora registrada exitosamente.");
             }
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.response?.data?.message || "Ocurrió un error inesperado al guardar.");
+            // No hacemos nada con el error aquí.
+            // El interceptor en main.jsx ya lo mostró en pantalla como notificación roja.
         } finally {
             setLoadingSubmit(false);
         }
@@ -89,12 +92,6 @@ export default function ModalAseguradora({ isOpen, onClose, aseguradoraId, onSuc
 
                 {/* Body Modal */}
                 <div className="p-6">
-                    {error && (
-                        <div className="mb-5 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100">
-                            {error}
-                        </div>
-                    )}
-
                     {loadingFetch ? (
                         <div className="flex flex-col items-center justify-center py-8">
                             <Loader2 className="animate-spin text-blue-600 mb-3" size={32} />

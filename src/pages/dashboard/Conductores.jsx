@@ -9,10 +9,13 @@ import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
 
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
+
 export default function Conductores() {
   const [conductores, setConductores] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   // --- ESTADOS DE TABLA (Busqueda, Filtro y Paginación) ---
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -54,15 +57,15 @@ export default function Conductores() {
     const textoBusqueda = busqueda.toLowerCase();
     const dni = c.persona?.dni || "";
     const nombreCompleto = `${c.persona?.nombre || ""} ${c.persona?.apPaterno || ""}`.toLowerCase();
-    
+
     // Compara por DNI o por Nombre
     const coincideBusqueda = dni.includes(textoBusqueda) || nombreCompleto.includes(textoBusqueda);
-    
+
     // Compara el estado
-    const coincideEstado = 
-      filtroEstado === "todos" ? true : 
-      filtroEstado === "activos" ? c.estado === 1 : 
-      c.estado === 0;
+    const coincideEstado =
+      filtroEstado === "todos" ? true :
+        filtroEstado === "activos" ? c.estado === 1 :
+          c.estado === 0;
 
     return coincideBusqueda && coincideEstado;
   });
@@ -79,14 +82,20 @@ export default function Conductores() {
   const handleOpenVer = (cond) => { setConductorSeleccionado(cond); setModalVerOpen(true); };
   const handleOpenEstado = (cond) => { setConductorSeleccionado(cond); setModalEstadoOpen(true); };
 
+  // --- HANDLER CAMBIO DE ESTADO ACTUALIZADO ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoConductor(conductorSeleccionado.idConduc, datosEstado);
+
       setModalEstadoOpen(false);
       cargarConductores();
+
+      const accion = datosEstado.estado === 1 ? "activado" : "dado de baja";
+      toast.success(`Conductor ${accion} exitosamente.`);
+
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      setModalEstadoOpen(false);
     } finally {
       setLoadingEstado(false);
     }
@@ -96,7 +105,7 @@ export default function Conductores() {
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
 
       {/* Uso de nuestro componente reutilizable de cabecera */}
-      <TableToolbar 
+      <TableToolbar
         busqueda={busqueda}
         setBusqueda={setBusqueda}
         filtroEstado={filtroEstado}
@@ -192,7 +201,7 @@ export default function Conductores() {
 
       {/* Uso de nuestro componente reutilizable de Paginación */}
       {!loading && (
-        <TablePagination 
+        <TablePagination
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
           totalRegistros={conductoresFiltrados.length}

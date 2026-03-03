@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Outlet, NavLink } from "react-router-dom";
 import {
-    LayoutDashboard, Car, Users, Menu, Icon,
+    LayoutDashboard, ChartNoAxesCombined, Car, Users, Menu, Icon,
     User, Lock, ShieldCheck, LogOut, Handshake, NotepadText, UserStar, CardSim
 } from "lucide-react";
 import { steeringWheel } from '@lucide/lab';
@@ -67,6 +67,11 @@ export default function DashboardLayout() {
                     <SidebarLink to="/dashboard" icon={<LayoutDashboard size={18} />}
                         text="Inicio" collapsed={collapsed}
                     />
+
+                    <SidebarLink to="/dashboard/reportes" icon={<ChartNoAxesCombined size={18} />}
+                        text="Reportes" collapsed={collapsed}
+                    />
+
                     {/* 2. Envolver el enlace de Usuarios con la condición */}
                     {isSuperOrAdmin && (
                         <SidebarLink to="/dashboard/usuarios" icon={<UserStar size={18} />}
@@ -98,8 +103,6 @@ export default function DashboardLayout() {
                     <SidebarLink to="/dashboard/asociaciones" icon={<Handshake size={18} />}
                         text="Asociaciones" collapsed={collapsed}
                     />
-
-
 
                 </nav>
             </aside>

@@ -9,6 +9,9 @@ import ModalCambioEstado from "../../components/ui/ModalCambioEstado.jsx";
 import TableToolbar from "../../components/ui/TableToolbar.jsx";
 import TablePagination from "../../components/ui/TablePagination.jsx";
 
+// 1. IMPORTAMOS SONNER
+import { toast } from "sonner";
+
 export default function Tucs() {
   const [tucs, setTucs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -53,15 +56,15 @@ export default function Tucs() {
     const term = busqueda.toLowerCase();
     const numTuc = String(t.numTuc).toLowerCase();
     const placa = t.empadronamiento?.vehiculo?.placa?.toLowerCase() || "";
-    
+
     // Búsqueda inteligente
     const coincideBusqueda = numTuc.includes(term) || placa.includes(term);
 
     // Filtro por estado
-    const coincideEstado = 
-      filtroEstado === "todos" ? true : 
-      filtroEstado === "activos" ? t.estado === 1 : 
-      t.estado === 0;
+    const coincideEstado =
+      filtroEstado === "todos" ? true :
+        filtroEstado === "activos" ? t.estado === 1 :
+          t.estado === 0;
 
     return coincideBusqueda && coincideEstado;
   });
@@ -78,14 +81,18 @@ export default function Tucs() {
   const handleOpenVer = (tuc) => { setTucSeleccionado(tuc); setModalVerOpen(true); };
   const handleOpenEstado = (tuc) => { setTucSeleccionado(tuc); setModalEstadoOpen(true); };
 
+  // --- HANDLER CAMBIO DE ESTADO ACTUALIZADO ---
   const confirmarCambioEstado = async (datosEstado) => {
     try {
       setLoadingEstado(true);
       await cambiarEstadoTuc(tucSeleccionado.idTuc, datosEstado);
       setModalEstadoOpen(false);
       cargarTucs();
+
+      const accion = datosEstado.estado === 1 ? "activada" : "dada de baja";
+      toast.success(`TUC ${accion} exitosamente.`);
     } catch (error) {
-      alert("Error al cambiar estado: " + (error.response?.data?.message || error.message));
+      setModalEstadoOpen(false); // El interceptor maneja el error visual
     } finally {
       setLoadingEstado(false);
     }
@@ -95,7 +102,7 @@ export default function Tucs() {
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
 
       {/* Uso de nuestro componente reutilizable de cabecera */}
-      <TableToolbar 
+      <TableToolbar
         busqueda={busqueda}
         setBusqueda={setBusqueda}
         filtroEstado={filtroEstado}
@@ -152,7 +159,10 @@ export default function Tucs() {
                   </td>
                   <td className="p-4 text-sm text-slate-600 font-medium">{t.fechaHasta}</td>
                   <td className="p-4 text-sm text-center">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border ${t.estadoVigencia === "VIGENTE" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-rose-50 text-rose-600 border-rose-200"}`}>
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border ${t.estadoVigencia === "No Vencido"
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                      : "bg-rose-50 text-rose-600 border-rose-200"
+                      }`}>
                       {t.estadoVigencia}
                     </span>
                   </td>
@@ -184,7 +194,7 @@ export default function Tucs() {
 
       {/* Uso de nuestro componente reutilizable de Paginación */}
       {!loading && (
-        <TablePagination 
+        <TablePagination
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
           totalRegistros={tucsFiltrados.length}
