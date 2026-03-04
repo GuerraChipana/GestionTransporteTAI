@@ -2,36 +2,44 @@ import Busqueda from '../components/Busqueda'; // Ajusta la ruta si es necesario
 
 export default function InicioPrincipal() {
   return (
-    <div className="min-h-screen bg-slate-50 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 relative overflow-hidden flex flex-col">
 
-      {/* Fondo decorativo (Brillos sutiles) */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-500/20 blur-[100px] rounded-full pointer-events-none"></div>
-      <div className="absolute top-[20%] right-[-5%] w-72 h-72 bg-emerald-500/10 blur-[80px] rounded-full pointer-events-none"></div>
+      {/* Hero / Banner Superior (Fondo azul marino estilo institucional) */}
+      <div className="relative bg-[#0b172a] bg-gradient-to-b from-slate-900 to-blue-950 pb-40 pt-12 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
 
-      {/* Hero / Banner Superior con Degradado */}
-      <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 pb-32 pt-16 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
-        <div className="max-w-5xl mx-auto text-center space-y-5">
+        {/* Decoraciones sutiles opcionales */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
 
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-400/20 backdrop-blur-sm shadow-inner">
-            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-            <p className="text-blue-200 font-semibold text-xs sm:text-sm uppercase tracking-widest">
-              Sistema Integrado TAI
+        <div className="max-w-5xl mx-auto text-center space-y-8">
+
+          {/* Logo */}
+          <div className="flex justify-center">
+            <img
+              src="logo-mdati-blanco.png"
+              alt="Municipalidad Distrital de Túpac Amaru Inca"
+              className="h-28 sm:h-32 object-contain drop-shadow-lg"
+            />
+          </div>
+
+          {/* Textos principales */}
+          <div className="space-y-4">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight drop-shadow-sm">
+              Portal de Búsqueda Vehicular
+            </h1>
+
+            <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto font-normal px-4">
+              Consulta rápida del estado de empadronamiento, pólizas de seguro y permisos (TUC) de los vehículos de transporte en la jurisdicción.
             </p>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 tracking-tight leading-tight">
-            Portal de Búsqueda Vehicular
-          </h1>
-
-          <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto font-medium px-4">
-            Consulta rápida del estado de empadronamiento, pólizas de seguro y permisos (TUC) de los vehículos de transporte en la jurisdicción.
-          </p>
         </div>
       </div>
 
       {/* Contenedor del Buscador (Se superpone al banner) */}
-      <div className="relative z-10 px-4 sm:px-6 lg:px-8 -mt-24 pb-16">
-        <Busqueda />
+      <div className="relative z-10 px-4 sm:px-6 lg:px-8 -mt-24 pb-16 flex-1">
+        <div className="max-w-4xl mx-auto">
+          <Busqueda />
+        </div>
       </div>
 
     </div>
